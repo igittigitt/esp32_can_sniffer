@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"/d/Dev/.espressif/python_env/idf5.5_py3.11_env/Scripts/python.exe\":*)",
+      "Bash(\"/d/Dev/.espressif/python_env/idf5.5_py3.11_env/Scripts/compote.exe\" component update-dependencies --path \"d:/Dev/code/esp32_can_sniffer/main\")",
+      "Bash(\"/d/Dev/.espressif/python_env/idf5.5_py3.11_env/Scripts/compote.exe\" --help)",
+      "Bash(\"/d/Dev/.espressif/python_env/idf5.5_py3.11_env/Scripts/compote.exe\" project --help)",
+      "Bash(IDF_PATH=\"/d/Dev/esp/v5.5.2/esp-idf\" IDF_PYTHON_ENV_PATH=\"/d/Dev/.espressif/python_env/idf5.5_py3.11_env\" IDF_TOOLS_PATH=\"/d/Dev/.espressif\" \"/d/Dev/.espressif/python_env/idf5.5_py3.11_env/Scripts/python.exe\" \"/d/Dev/esp/v5.5.2/esp-idf/tools/idf.py\" --project-dir \"/d/Dev/code/esp32_can_sniffer\" update-dependencies)"
+    ]
+  }
+}

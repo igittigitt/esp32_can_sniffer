@@ -1,0 +1,127 @@
+menu "CAN Sniffer Configuration"
+
+    config TCP_PORT
+        int "Telnet TCP port"
+        default 23
+        help
+            TCP port for the command interface.
+
+    config MAX_TCP_CLIENTS
+        int "Maximum simultaneous TCP clients"
+        default 3
+        range 1 5
+
+    config WIFI_SSID
+        string "WiFi SSID (compile-time, overridable via NVS)"
+        default ""
+        help
+            Leave empty to use NVS or AP mode.
+
+    config WIFI_PASSWORD
+        string "WiFi Password (compile-time)"
+        default ""
+
+    menu "CAN Hardware - GPIO Pins"
+
+        config CAN_TX_GPIO
+            int "TWAI TX GPIO (shared by all buses)"
+            default 4
+            range 0 30
+
+        config CAN_RX_GPIO
+            int "TWAI RX GPIO (shared by all buses)"
+            default 5
+            range 0 30
+
+        config CAN_STB_HS_GPIO
+            int "STB GPIO - HS bus (TJA1042)"
+            default 1
+            range 0 30
+            help
+                STB LOW = Normal mode, STB HIGH = Standby (TJA1042).
+
+        config CAN_STB_MS_GPIO
+            int "STB GPIO - MS bus (TJA1042)"
+            default 2
+            range 0 30
+
+        config CAN_STB_MM_GPIO
+            int "STB GPIO - MM bus (TJA1042)"
+            default 3
+            range 0 30
+
+    endmenu
+
+    menu "CAN Default Bitrates"
+
+        choice CAN_BITRATE_HS
+            prompt "HS bus default bitrate"
+            default CAN_BITRATE_HS_500
+            config CAN_BITRATE_HS_125
+                bool "125 kbps"
+            config CAN_BITRATE_HS_250
+                bool "250 kbps"
+            config CAN_BITRATE_HS_500
+                bool "500 kbps"
+            config CAN_BITRATE_HS_1000
+                bool "1000 kbps"
+        endchoice
+
+        config CAN_DEFAULT_BITRATE_HS
+            int
+            default 125  if CAN_BITRATE_HS_125
+            default 250  if CAN_BITRATE_HS_250
+            default 500  if CAN_BITRATE_HS_500
+            default 1000 if CAN_BITRATE_HS_1000
+
+        choice CAN_BITRATE_MS
+            prompt "MS bus default bitrate"
+            default CAN_BITRATE_MS_125
+            config CAN_BITRATE_MS_125
+                bool "125 kbps"
+            config CAN_BITRATE_MS_250
+                bool "250 kbps"
+            config CAN_BITRATE_MS_500
+                bool "500 kbps"
+            config CAN_BITRATE_MS_1000
+                bool "1000 kbps"
+        endchoice
+
+        config CAN_DEFAULT_BITRATE_MS
+            int
+            default 125  if CAN_BITRATE_MS_125
+            default 250  if CAN_BITRATE_MS_250
+            default 500  if CAN_BITRATE_MS_500
+            default 1000 if CAN_BITRATE_MS_1000
+
+        choice CAN_BITRATE_MM
+            prompt "MM bus default bitrate"
+            default CAN_BITRATE_MM_125
+            config CAN_BITRATE_MM_125
+                bool "125 kbps"
+            config CAN_BITRATE_MM_250
+                bool "250 kbps"
+            config CAN_BITRATE_MM_500
+                bool "500 kbps"
+            config CAN_BITRATE_MM_1000
+                bool "1000 kbps"
+        endchoice
+
+        config CAN_DEFAULT_BITRATE_MM
+            int
+            default 125  if CAN_BITRATE_MM_125
+            default 250  if CAN_BITRATE_MM_250
+            default 500  if CAN_BITRATE_MM_500
+            default 1000 if CAN_BITRATE_MM_1000
+
+    endmenu
+
+    config WS_RECONNECT_HISTORY_LINES
+        int "WebSocket reconnect history (lines)"
+        default 50
+        range 0 128
+        help
+            Wie viele gepufferte Zeilen ein neuer WS/Telnet-Client beim
+            Verbinden nachgeliefert bekommt.
+
+endmenu

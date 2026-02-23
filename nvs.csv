@@ -1,0 +1,10 @@
+key,type,encoding,value
+wifi_config,namespace,,
+ssid,data,string,WIFINAME
+password,data,string,WIFIPASSWORD
+can_config,namespace,,
+br_ms,data,u32,125
+br_hs,data,u32,500
+br_mm,data,u32,125
+active_bus,data,u8,0
+listen_only,data,u8,1

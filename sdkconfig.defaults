@@ -1,0 +1,21 @@
+# Target
+CONFIG_IDF_TARGET="esp32c6"
+
+# FreeRTOS
+CONFIG_FREERTOS_HZ=1000
+
+# TWAI
+CONFIG_TWAI_ISR_IN_IRAM=y
+
+# WiFi
+CONFIG_ESP_WIFI_STATIC_RX_BUFFER_NUM=4
+CONFIG_ESP_WIFI_DYNAMIC_RX_BUFFER_NUM=8
+
+# Log level (change to DEBUG for detailed CAN output)
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+
+# Task watchdog - disable for long-running tasks
+CONFIG_ESP_TASK_WDT_EN=n
+
+# HTTP Server - WebSocket support
+CONFIG_HTTPD_WS_SUPPORT=y

@@ -1,0 +1,21 @@
+idf_component_register(
+    SRCS
+        "can_sniffer_main.c"
+        "web_server.c"
+        "ring_buffer.c"
+        "led_indicator.c"
+    INCLUDE_DIRS
+        "."
+    REQUIRES
+        driver
+        esp_timer
+        freertos
+        nvs_flash
+        esp_wifi
+        esp_event
+        esp_netif
+        esp_http_server
+        app_update
+        led_strip
+        can_driver
+)
