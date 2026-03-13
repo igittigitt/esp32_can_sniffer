@@ -272,7 +272,7 @@ void can_nvs_save_listen_only(bool enable)
 
 void parse_command(char *cmd, int sock)
 {
-    char response[800];
+    char response[900];
 
     // Strip CR/LF
     for (char *p = cmd; *p; p++) {
@@ -542,6 +542,12 @@ void parse_command(char *cmd, int sock)
         CMD_SEND(sock, response, strlen(response));
     }
 
+    // ── PING ──────────────────────────────────────────────────────
+    else if (strcasecmp(cmd,"PING") == 0) {
+        const char *pong = "# PONG\r\n";
+        CMD_SEND(sock, pong, strlen(pong));
+    }
+
     // ── HELP ──────────────────────────────────────────────────────
     else if (strcasecmp(cmd,"HELP") == 0) {
         snprintf(response, sizeof(response),
@@ -556,6 +562,7 @@ void parse_command(char *cmd, int sock)
             "  RSSI                            - WiFi signal bar + dBm\r\n"
             "  RSSI DBM                        - WiFi signal dBm (machine-readable)\r\n"
             "  IDENTIFY                        - Device type, version and buses\r\n"
+            "  PING                            - Connectivity check (replies PONG)\r\n"
             "  REBOOT                          - Restart device\r\n"
             "  HELP                            - This help\r\n"
             "Output format: (timestamp) can0 ID#DATA\r\n");
