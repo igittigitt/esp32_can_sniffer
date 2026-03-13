@@ -1,3 +1,3 @@
 #pragma once
 
-#define CAN_SNIFFER_VERSION  "1.4.3"
+#define CAN_SNIFFER_VERSION  "1.4.4"

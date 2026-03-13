@@ -544,8 +544,13 @@ void parse_command(char *cmd, int sock)
 
     // ── PING ──────────────────────────────────────────────────────
     else if (strcasecmp(cmd,"PING") == 0) {
-        const char *pong = "# PONG\r\n";
-        CMD_SEND(sock, pong, strlen(pong));
+        wifi_ap_record_t ap_info;
+        if (esp_wifi_sta_get_ap_info(&ap_info) == ESP_OK) {
+            snprintf(response, sizeof(response), "# PONG (%d dBm)\r\n", ap_info.rssi);
+        } else {
+            snprintf(response, sizeof(response), "# PONG (N/A)\r\n");
+        }
+        CMD_SEND(sock, response, strlen(response));
     }
 
     // ── HELP ──────────────────────────────────────────────────────
