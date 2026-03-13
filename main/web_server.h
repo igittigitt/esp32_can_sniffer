@@ -5,7 +5,7 @@
  *
  * Port 80:
  *   GET  /          → Terminal-UI (HTML/JS inline)
- *   GET  /ws        → WebSocket (LIN-Stream + Befehle)
+ *   GET  /ws        → WebSocket (CAN-Stream + Befehle)
  *   POST /ota       → Firmware-Update (.bin Upload)
  */
 

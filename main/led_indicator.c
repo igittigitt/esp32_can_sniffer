@@ -30,7 +30,7 @@ static const char *TAG = "LED";
 
 #define BRIGHT_BASE     10   // WiFi-Grundzustand (gedimmt)
 #define BRIGHT_BLINK    25   // Blink-Zustand (etwas heller)
-#define BRIGHT_FLASH    50   // LIN-Blitz
+#define BRIGHT_FLASH    50   // CAN-Blitz
 
 // ── Farben (R, G, B) bei jeweiliger Helligkeit ───────────────────
 // Werden zur Laufzeit mit Helligkeitsfaktor skaliert → keine
@@ -116,7 +116,7 @@ static void wifi_state_to_color(wifi_state_t state,
 // Blink-Zustand: true = LED an, false = aus
 static bool s_blink_on = false;
 
-// Wann endet der aktuelle LIN-Blitz? (in FreeRTOS-Ticks)
+// Wann endet der aktuelle CAN-Blitz? (in FreeRTOS-Ticks)
 static TickType_t s_flash_end = 0;
 static rgb_t      s_flash_color = {0, 0, 0};
 static bool       s_in_flash = false;
@@ -173,14 +173,14 @@ static void led_task(void *pvParameters)
                     ESP_LOGD(TAG, "WiFi error");
                     break;
 
-                case LED_EVENT_LIN_RX:
+                case LED_EVENT_CAN_RX:
                     s_flash_color = COLOR_CYAN;
                     s_flash_end   = xTaskGetTickCount() +
                                     pdMS_TO_TICKS(100);
                     s_in_flash    = true;
                     break;
 
-                case LED_EVENT_LIN_TX:
+                case LED_EVENT_CAN_TX:
                     s_flash_color = COLOR_MAGENTA;
                     s_flash_end   = xTaskGetTickCount() +
                                     pdMS_TO_TICKS(100);
@@ -196,7 +196,7 @@ static void led_task(void *pvParameters)
 
         // ── LED ausgeben ──────────────────────────────────────────
         if (s_in_flash) {
-            // LIN-Blitz hat Vorrang
+            // CAN-Blitz hat Vorrang
             led_set(s_flash_color, BRIGHT_FLASH);
 
         } else if (s_wifi_state == STATE_WIFI_ERROR &&
@@ -284,7 +284,7 @@ void led_indicator_init(void)
 void led_indicator_send(led_event_t event)
 {
     if (s_queue) {
-        // Nicht blockierend — wenn Queue voll, LIN-Blitz einfach verwerfen
+        // Nicht blockierend — wenn Queue voll, CAN-Blitz einfach verwerfen
         xQueueSend(s_queue, &event, 0);
     }
 }

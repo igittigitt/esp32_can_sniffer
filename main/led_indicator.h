@@ -10,9 +10,9 @@
  *   WiFi STA, connected  → Grün, gedimmt
  *   WiFi Fehler          → Rot, 3× schnell blinken dann aus
  *
- * LIN-Überlagerung (100ms Blitz über WiFi-Grundzustand):
- *   LIN RX               → Cyan
- *   LIN TX               → Magenta
+ * CAN-Aktivität (100ms Blitz über WiFi-Grundzustand):
+ *   CAN RX               → Cyan
+ *   CAN TX               → Magenta
  *
  * GPIO automatisch per Ziel-Chip:
  *   ESP32-C6  → GPIO 8
@@ -34,9 +34,9 @@ typedef enum {
     LED_EVENT_WIFI_STA_CONNECTED,   ///< STA: verbunden + IP
     LED_EVENT_WIFI_ERROR,           ///< STA: max. Retries erreicht
 
-    // LIN-Aktivität (kurzer Blitz)
-    LED_EVENT_LIN_RX,               ///< Frame empfangen
-    LED_EVENT_LIN_TX,               ///< Frame / Header gesendet
+    // CAN-Aktivität (kurzer Blitz)
+    LED_EVENT_CAN_RX,               ///< Frame empfangen
+    LED_EVENT_CAN_TX,               ///< Frame / Header gesendet
 } led_event_t;
 
 // ── API ──────────────────────────────────────────────────────────

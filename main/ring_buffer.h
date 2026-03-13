@@ -3,7 +3,7 @@
 /**
  * ring_buffer.h — Thread-sicherer Circular Ring-Buffer
  *
- * Zentraler Message-Bus zwischen LIN RX Callback und allen
+ * Zentraler Message-Bus zwischen CAN RX Callback und allen
  * Ausgabe-Transporten (Telnet, WebSocket).
  *
  * Verhalten bei vollem Buffer: Ältester Eintrag wird überschrieben.

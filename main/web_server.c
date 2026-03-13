@@ -6,7 +6,7 @@
  *   - WebSocket: httpd nativ (ESP-IDF >= 4.4)
  *   - OTA: esp_ota_ops (HTTP POST, chunked write)
  *   - Terminal-UI: einzelne HTML-Seite, inline als C-String
- *   - LIN-Frames: aus ring_buffer lesen, per WS pushen
+ *   - CAN-Frames: aus ring_buffer lesen, per WS pushen
  *   - Befehle: per WS empfangen, an parse_command() weiterleiten
  */
 
@@ -94,7 +94,7 @@ static const char TERMINAL_HTML[] =
 "</style></head><body>"
 "<div id='header'>"
 "  <div id='status'></div>"
-"  <h1>CAN Sniffer <span style='color:#888;font-weight:400'>(v" LIN_SNIFFER_VERSION ")</span></h1>"
+"  <h1>CAN Sniffer <span style='color:#888;font-weight:400'>(v" CAN_SNIFFER_VERSION ")</span></h1>"
 "  <span id='ip' style='color:#888;font-size:11px'></span>"
 "  <div style='margin-left:auto;display:flex;gap:6px;align-items:center'>"
 "    <input id='otafile' type='file' accept='.bin' style='display:none' />"
@@ -419,7 +419,7 @@ static esp_err_t handler_ws(httpd_req_t *req)
         // Version beim WebSocket-Connect senden
         char welcome[128];
         snprintf(welcome, sizeof(welcome),
-                 "# CAN Sniffer v" LIN_SNIFFER_VERSION " (type HELP for commands)\r\n");
+                 "# CAN Sniffer v" CAN_SNIFFER_VERSION " (type HELP for commands)\r\n");
         httpd_ws_frame_t pkt = {
             .type    = HTTPD_WS_TYPE_TEXT,
             .payload = (uint8_t *)welcome,
@@ -560,7 +560,7 @@ void web_server_start(void)
 
     xTaskCreate(ws_push_task, "ws_push", 4096, NULL, 4, NULL);
 
-    ESP_LOGI(TAG, "CAN Sniffer Webserver v" LIN_SNIFFER_VERSION " started on port 80");
+    ESP_LOGI(TAG, "CAN Sniffer Webserver v" CAN_SNIFFER_VERSION " started on port 80");
 }
 
 void web_server_stop(void)

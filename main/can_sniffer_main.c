@@ -5,7 +5,7 @@
  * - Sniff 3 CAN buses (MS / HS / MM), switchable at runtime
  * - candump-compatible output format
  * - WiFi: NVS credentials with AP fallback
- * - Telnet: TCP command interface (port 2323)
+ * - Telnet: TCP command interface (port 23)
  * - Listen-Only / Normal mode switchable
  * - Configurable bitrate per bus (NVS-persistent)
  * - TX support in Normal mode
@@ -31,6 +31,7 @@
 #include "ring_buffer.h"
 #include "web_server.h"
 #include "led_indicator.h"
+#include "version.h"
 
 // Ausgabe-Makro: bei WS_FAKE_SOCK in WS-Puffer schreiben
 #define CMD_SEND(s, buf, len) \
@@ -160,7 +161,7 @@ void can_rx_callback(uint32_t id, const uint8_t *data, uint8_t dlc,
                      uint64_t timestamp_us, void *user_data)
 {
     stats.rx_frames++;
-    led_indicator_send(LED_EVENT_LIN_RX);
+    led_indicator_send(LED_EVENT_CAN_RX);
     output_candump(id, data, dlc, timestamp_us);
     ESP_LOGD(TAG, "RX: ID 0x%03lX DLC %d", (unsigned long)id, dlc);
 }
@@ -271,7 +272,7 @@ void can_nvs_save_listen_only(bool enable)
 
 void parse_command(char *cmd, int sock)
 {
-    char response[640];
+    char response[800];
 
     // Strip CR/LF
     for (char *p = cmd; *p; p++) {
@@ -412,7 +413,7 @@ void parse_command(char *cmd, int sock)
         esp_err_t ret = can_send_frame(id, data, dlc);
         if (ret == ESP_OK) {
             stats.tx_frames++;
-            led_indicator_send(LED_EVENT_LIN_TX);
+            led_indicator_send(LED_EVENT_CAN_TX);
             output_candump(id, data, dlc, esp_timer_get_time());
             snprintf(response, sizeof(response), "OK\r\n");
         } else {
@@ -494,6 +495,53 @@ void parse_command(char *cmd, int sock)
         esp_restart();
     }
 
+    // ── IDENTIFY ──────────────────────────────────────────────────
+    else if (strcasecmp(cmd,"IDENTIFY") == 0) {
+        snprintf(response, sizeof(response),
+                 "# Type: CAN, Version: %s, Buses: %s\r\n",
+                 CAN_SNIFFER_VERSION, CAN_SUPPORTED_BUSES);
+        CMD_SEND(sock, response, strlen(response));
+    }
+
+    // ── RSSI DBM (machine-readable) ───────────────────────────────
+    else if (strcasecmp(cmd,"RSSI DBM") == 0) {
+        wifi_ap_record_t ap_info;
+        if (esp_wifi_sta_get_ap_info(&ap_info) == ESP_OK) {
+            snprintf(response, sizeof(response), "# %d\r\n", ap_info.rssi);
+        } else {
+            snprintf(response, sizeof(response), "# N/A\r\n");
+        }
+        CMD_SEND(sock, response, strlen(response));
+    }
+
+    // ── RSSI (human-readable bar + dBm) ───────────────────────────
+    else if (strcasecmp(cmd,"RSSI") == 0) {
+        wifi_ap_record_t ap_info;
+        if (esp_wifi_sta_get_ap_info(&ap_info) == ESP_OK) {
+            int rssi = ap_info.rssi;
+            int bars = (rssi >= -55) ? 4 :
+                       (rssi >= -67) ? 3 :
+                       (rssi >= -80) ? 2 :
+                       (rssi >= -90) ? 1 : 0;
+            /* Unicode block elements (UTF-8): ▂▄▆█ */
+            static const char *const BAR[4] = {"\xe2\x96\x82", "\xe2\x96\x84",
+                                               "\xe2\x96\x86", "\xe2\x96\x88"};
+            char bar_str[24] = {0};
+            int pos = 0;
+            for (int i = 0; i < 4; i++) {
+                if (i < bars) {
+                    pos += snprintf(bar_str + pos, sizeof(bar_str) - pos, "%s", BAR[i]);
+                } else {
+                    bar_str[pos++] = '_';
+                }
+            }
+            snprintf(response, sizeof(response), "%s (%d dBm)\r\n", bar_str, rssi);
+        } else {
+            snprintf(response, sizeof(response), "N/A (not in STA mode)\r\n");
+        }
+        CMD_SEND(sock, response, strlen(response));
+    }
+
     // ── HELP ──────────────────────────────────────────────────────
     else if (strcasecmp(cmd,"HELP") == 0) {
         snprintf(response, sizeof(response),
@@ -505,6 +553,9 @@ void parse_command(char *cmd, int sock)
             "  WIFI <SSID> <PASSWORD>          - Set WiFi credentials\r\n"
             "  STATUS                          - Full status overview\r\n"
             "  STATS                           - Frame counters\r\n"
+            "  RSSI                            - WiFi signal bar + dBm\r\n"
+            "  RSSI DBM                        - WiFi signal dBm (machine-readable)\r\n"
+            "  IDENTIFY                        - Device type, version and buses\r\n"
             "  REBOOT                          - Restart device\r\n"
             "  HELP                            - This help\r\n"
             "Output format: (timestamp) can0 ID#DATA\r\n");

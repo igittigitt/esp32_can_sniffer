@@ -1,5 +1,10 @@
 # ESP32 CAN-Sniffer
 
+## Flash from image
+
+todo...
+
+
 ## Prebuild NVS for WiFi connection
 
 To setup WiFi-Connection in advance (SSID/PSK) you could put them into a file, build an bin-image of the NVS partition and flash it to the chip. This only need to be done once.
@@ -43,3 +48,10 @@ nvs,      data, nvs,     ,        0x6000,
 ```
 esptool.py --port COM5 write_flash 0x9000 nvs.bin
 ```
+
+## Build
+
+### Create a new Flash image
+
+```esptool.py --chip esp32c6 merge_bin -o flash/esp32c6_esp32_can_sniffer_merged.bin 0x0000 build/bootloader/bootloader.bin 0x8000 build/partition_table/partition-table.bin 0xd000 build/ota_data_initial.bin 0x10000 build/esp32_can_sniffer.bin```
+
