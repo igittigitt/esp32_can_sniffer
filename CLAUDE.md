@@ -60,7 +60,9 @@ CAN TWAI ISR
 
 Both Telnet (port 23) and WebSocket (port 80) share the same `parse_command()` function. Output uses candump format: `(timestamp) can0 ID#DATA`.
 
-Key commands: `CANBUS <MS|HS|MM|OFF>`, `BITRATE <bus> <kbps>`, `MODE <LISTEN|NORMAL>`, `SEND <ID> [bytes]`, `WIFI <ssid> <pass>`, `STATUS`, `PING`, `REBOOT`.
+Key commands: `CANBUS <MS|HS|MM|OFF>`, `BITRATE <bus> <kbps>`, `MODE <LISTEN|NORMAL>`, `SEND <ID> [bytes]`, `WIFI <ssid> <pass>`, `WIFIMODE <AP|STA>`, `STATUS`, `PING`, `REBOOT`.
+
+**`parse_command()` response buffer** is `char response[1024]` (stack-allocated). Every command response — including the full HELP text — must fit within 1024 bytes. When adding a new command, verify the HELP text still fits: count all bytes in the HELP `snprintf` format string and ensure the total stays below 1024. If it doesn't fit, increase the buffer size and update this note.
 
 ### WiFi Startup Logic
 

@@ -298,7 +298,7 @@ void can_nvs_save_listen_only(bool enable)
 
 void parse_command(char *cmd, int sock)
 {
-    char response[900];
+    char response[1024];
 
     // Strip CR/LF
     for (char *p = cmd; *p; p++) {
