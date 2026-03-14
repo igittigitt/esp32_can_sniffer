@@ -45,6 +45,7 @@ typedef struct { uint8_t r, g, b; } rgb_t;
 #define COLOR_RED      ((rgb_t){255, 0,   0  })
 #define COLOR_CYAN     ((rgb_t){0,   255, 255})
 #define COLOR_MAGENTA  ((rgb_t){255, 0,   255})
+#define COLOR_ORANGE   ((rgb_t){255, 80,  0  })
 #define COLOR_OFF      ((rgb_t){0,   0,   0  })
 
 // ── Interne Zustände ─────────────────────────────────────────────
@@ -185,6 +186,16 @@ static void led_task(void *pvParameters)
                     s_flash_end   = xTaskGetTickCount() +
                                     pdMS_TO_TICKS(100);
                     s_in_flash    = true;
+                    break;
+
+                case LED_EVENT_WIFI_MODE_TOGGLE:
+                    // 3 orange flashes to confirm WiFi mode toggle (device reboots after)
+                    for (int i = 0; i < 3; i++) {
+                        led_set(COLOR_ORANGE, BRIGHT_FLASH);
+                        vTaskDelay(pdMS_TO_TICKS(150));
+                        led_off();
+                        vTaskDelay(pdMS_TO_TICKS(150));
+                    }
                     break;
             }
         }

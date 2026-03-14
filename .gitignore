@@ -34,4 +34,9 @@ flash/*.elf
 flash/*.map
 # Do NOT ignore: flash/lin_sniffer_merged.bin  ← committed intentionally
 
+# local build NVS memory (contains Wifi password)
 nvs.bin
+
+# Claude Code lokale Einstellungen
+CLAUDE.local.md
+.claude/settings.local.json

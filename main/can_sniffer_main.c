@@ -74,11 +74,16 @@ static const char *TAG = "CAN_SNIFFER";
 #define NVS_NS_CAN          "can_config"
 #define NVS_KEY_SSID        "ssid"
 #define NVS_KEY_PASS        "password"
+#define NVS_KEY_WIFI_FORCE_AP "wifi_force_ap"
 #define NVS_KEY_BR_MS       "br_ms"
 #define NVS_KEY_BR_HS       "br_hs"
 #define NVS_KEY_BR_MM       "br_mm"
 #define NVS_KEY_ACTIVE_BUS  "active_bus"
 #define NVS_KEY_LISTEN_ONLY "listen_only"
+
+// BOOT button
+#define BOOT_BUTTON_GPIO    9       // GPIO 9 = BOOT/DOWNLOAD button on ESP32-C6 devkits
+#define BOOT_BUTTON_HOLD_MS 3000    // hold duration to trigger WiFi mode toggle
 
 // ═══════════════════════════════════════════════════════════════════
 // Global Variables
@@ -126,6 +131,7 @@ void parse_command(char *cmd, int sock);
 void client_handler_task(void *pvParameters);
 void tcp_server_task(void *pvParameters);
 void statistics_task(void *pvParameters);
+void boot_button_task(void *pvParameters);
 
 // ═══════════════════════════════════════════════════════════════════
 // Helper: Broadcast + candump Output
@@ -191,6 +197,26 @@ bool wifi_set_credentials(const char *ssid, const char *password)
 
     bool ok = (nvs_set_str(h, NVS_KEY_SSID, ssid) == ESP_OK &&
                nvs_set_str(h, NVS_KEY_PASS, password) == ESP_OK &&
+               nvs_commit(h) == ESP_OK);
+    nvs_close(h);
+    return ok;
+}
+
+static bool wifi_nvs_get_force_ap(void)
+{
+    nvs_handle_t h;
+    if (nvs_open(NVS_NS_WIFI, NVS_READONLY, &h) != ESP_OK) return false;
+    uint8_t val = 0;
+    nvs_get_u8(h, NVS_KEY_WIFI_FORCE_AP, &val);
+    nvs_close(h);
+    return (bool)val;
+}
+
+static bool wifi_nvs_set_force_ap(bool force_ap)
+{
+    nvs_handle_t h;
+    if (nvs_open(NVS_NS_WIFI, NVS_READWRITE, &h) != ESP_OK) return false;
+    bool ok = (nvs_set_u8(h, NVS_KEY_WIFI_FORCE_AP, (uint8_t)force_ap) == ESP_OK &&
                nvs_commit(h) == ESP_OK);
     nvs_close(h);
     return ok;
@@ -553,6 +579,40 @@ void parse_command(char *cmd, int sock)
         CMD_SEND(sock, response, strlen(response));
     }
 
+    // ── WIFIMODE [AP|STA] ─────────────────────────────────────────
+    else if (strncasecmp(cmd,"WIFIMODE", 8) == 0) {
+        const char *arg = cmd + 8;
+        while (*arg == ' ') arg++;
+
+        if (*arg == '\0') {
+            wifi_mode_t mode;
+            esp_wifi_get_mode(&mode);
+            bool force_ap = wifi_nvs_get_force_ap();
+            snprintf(response, sizeof(response),
+                     "OK: WiFi mode: %s%s\r\n",
+                     (mode == WIFI_MODE_AP) ? "AP" : "STA",
+                     force_ap ? " (force-AP set, use WIFIMODE STA to clear)" : "");
+        } else if (strcasecmp(arg, "AP") == 0) {
+            if (wifi_nvs_set_force_ap(true)) {
+                snprintf(response, sizeof(response),
+                         "OK: Will start in AP mode after REBOOT\r\n");
+            } else {
+                snprintf(response, sizeof(response), "ERROR: NVS write failed\r\n");
+            }
+        } else if (strcasecmp(arg, "STA") == 0) {
+            if (wifi_nvs_set_force_ap(false)) {
+                snprintf(response, sizeof(response),
+                         "OK: Will start in STA mode after REBOOT\r\n");
+            } else {
+                snprintf(response, sizeof(response), "ERROR: NVS write failed\r\n");
+            }
+        } else {
+            snprintf(response, sizeof(response),
+                     "ERROR: WIFIMODE <AP|STA>\r\n");
+        }
+        CMD_SEND(sock, response, strlen(response));
+    }
+
     // ── HELP ──────────────────────────────────────────────────────
     else if (strcasecmp(cmd,"HELP") == 0) {
         snprintf(response, sizeof(response),
@@ -562,6 +622,7 @@ void parse_command(char *cmd, int sock)
             "  MODE <LISTEN|NORMAL>            - Set RX/TX mode\r\n"
             "  SEND <ID> [B0..B7]              - Send CAN frame (NORMAL only)\r\n"
             "  WIFI <SSID> <PASSWORD>          - Set WiFi credentials\r\n"
+            "  WIFIMODE <AP|STA>              - Force WiFi mode (persisted, needs REBOOT)\r\n"
             "  STATUS                          - Full status overview\r\n"
             "  STATS                           - Frame counters\r\n"
             "  RSSI                            - WiFi signal bar + dBm\r\n"
@@ -831,12 +892,58 @@ void wifi_init(void)
         ESP_LOGI(TAG, "Using NVS WiFi credentials");
     }
 
+    // WIFIMODE AP command or BOOT button hold overrides STA credentials
+    if (found && wifi_nvs_get_force_ap()) {
+        ESP_LOGW(TAG, "AP mode forced via NVS flag (WIFIMODE AP or BOOT button)");
+        found = false;
+    }
+
     if (!found) {
         wifi_start_ap();
         return;
     }
 
     wifi_connect_sta(ssid, password);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// BOOT Button Task — hold 3 s to toggle WiFi mode (STA ↔ AP)
+// ═══════════════════════════════════════════════════════════════════
+
+void boot_button_task(void *pvParameters)
+{
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << BOOT_BUTTON_GPIO),
+        .mode         = GPIO_MODE_INPUT,
+        .pull_up_en   = GPIO_PULLUP_ENABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type    = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&io_conf);
+
+    const int poll_ms    = 100;
+    const int hold_ticks = BOOT_BUTTON_HOLD_MS / poll_ms;  // 30 × 100ms = 3 s
+    int       held_count = 0;
+
+    while (1) {
+        vTaskDelay(pdMS_TO_TICKS(poll_ms));
+
+        if (gpio_get_level(BOOT_BUTTON_GPIO) == 0) {  // active-low
+            held_count++;
+            if (held_count == hold_ticks) {
+                bool cur_ap = wifi_nvs_get_force_ap();
+                bool new_ap = !cur_ap;
+                wifi_nvs_set_force_ap(new_ap);
+                ESP_LOGW(TAG, "BOOT button 3s hold → WiFi mode: %s → %s",
+                         cur_ap ? "force-AP" : "STA", new_ap ? "force-AP" : "STA");
+                led_indicator_send(LED_EVENT_WIFI_MODE_TOGGLE);
+                vTaskDelay(pdMS_TO_TICKS(1200));  // let LED animation finish
+                esp_restart();
+            }
+        } else {
+            held_count = 0;
+        }
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -881,8 +988,9 @@ void app_main(void)
 
     // ── 5. Start servers + tasks ──────────────────────────────────
     web_server_start();
-    xTaskCreate(tcp_server_task, "tcp",   4096, NULL, 5, NULL);
-    xTaskCreate(statistics_task, "stats", 2048, NULL, 3, NULL);
+    xTaskCreate(tcp_server_task,  "tcp",      4096, NULL, 5, NULL);
+    xTaskCreate(statistics_task,  "stats",    2048, NULL, 3, NULL);
+    xTaskCreate(boot_button_task, "boot_btn", 2048, NULL, 4, NULL);
 
     ESP_LOGI(TAG, "Running! Connect: nc <IP> %d", TCP_PORT);
 

@@ -15,6 +15,7 @@
 #include "version.h"
 
 #include "esp_http_server.h"
+#include "esp_wifi.h"
 #include "esp_ota_ops.h"
 #include "esp_partition.h"
 #include "esp_log.h"
@@ -141,7 +142,7 @@ static const char TERMINAL_HTML[] =
 "  ws.onopen=()=>{"
 "    status.className='ok';"
 "    document.getElementById('ip').textContent=location.host;"
-"    appendLine('# Connected','info');"
+""
 "  };"
 "  ws.onmessage=e=>{"
 "    e.data.split('\\n').forEach(l=>{if(l.trim())appendLine(l,classForLine(l));});"
@@ -417,9 +418,28 @@ static esp_err_t handler_ws(httpd_req_t *req)
         ws_client_add(fd);
 
         // Version beim WebSocket-Connect senden
-        char welcome[128];
+        char rssi_suffix[32] = "";
+        {
+            wifi_ap_record_t _ap;
+            if (esp_wifi_sta_get_ap_info(&_ap) == ESP_OK) {
+                int rssi = _ap.rssi;
+                int bars = (rssi >= -55) ? 4 : (rssi >= -67) ? 3 :
+                           (rssi >= -80) ? 2 : (rssi >= -90) ? 1 : 0;
+                static const char *const BAR[4] = {"\xe2\x96\x82", "\xe2\x96\x84",
+                                                   "\xe2\x96\x86", "\xe2\x96\x88"};
+                char bar[24] = {0};
+                int pos = 0;
+                for (int i = 0; i < 4; i++) {
+                    if (i < bars) pos += snprintf(bar + pos, sizeof(bar) - pos, "%s", BAR[i]);
+                    else bar[pos++] = '_';
+                }
+                snprintf(rssi_suffix, sizeof(rssi_suffix), " %s (%d dBm)", bar, rssi);
+            }
+        }
+        char welcome[160];
         snprintf(welcome, sizeof(welcome),
-                 "# CAN Sniffer v" CAN_SNIFFER_VERSION " (type HELP for commands)\r\n");
+                 "# CAN Sniffer v" CAN_SNIFFER_VERSION " (type HELP for commands)%s\r\n",
+                 rssi_suffix);
         httpd_ws_frame_t pkt = {
             .type    = HTTPD_WS_TYPE_TEXT,
             .payload = (uint8_t *)welcome,

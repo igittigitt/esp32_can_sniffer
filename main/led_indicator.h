@@ -37,6 +37,9 @@ typedef enum {
     // CAN-Aktivität (kurzer Blitz)
     LED_EVENT_CAN_RX,               ///< Frame empfangen
     LED_EVENT_CAN_TX,               ///< Frame / Header gesendet
+
+    // System-Aktionen
+    LED_EVENT_WIFI_MODE_TOGGLE,     ///< WiFi-Modus umgeschaltet (Button / WIFIMODE)
 } led_event_t;
 
 // ── API ──────────────────────────────────────────────────────────
