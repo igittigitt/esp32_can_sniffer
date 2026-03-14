@@ -84,6 +84,10 @@ static const char TERMINAL_HTML[] =
 "button{background:#007acc;color:#fff;border:none;padding:6px 14px;border-radius:3px;cursor:pointer;font:inherit}"
 "button:hover{background:#1a8ad4}"
 "button:active{transform:scale(0.95);opacity:0.8}"
+"#connbtn{background:#4caf50}"
+"#connbtn:hover{background:#66bb6a}"
+"#connbtn.disconn{background:#f44336}"
+"#connbtn.disconn:hover{background:#ef5350}"
 "@keyframes pole{0%{background-position:0 0}100%{background-position:40px 0}}"
 "#otafill{height:100%;width:0%;background:#4caf50;transition:width .3s ease}"
 "#otafill.indeterminate{"
@@ -96,7 +100,7 @@ static const char TERMINAL_HTML[] =
 "<div id='header'>"
 "  <div id='status'></div>"
 "  <h1>CAN Sniffer <span style='color:#888;font-weight:400'>(v" CAN_SNIFFER_VERSION ")</span></h1>"
-"  <span id='ip' style='color:#888;font-size:11px'></span>"
+"  <button id='connbtn' onclick='toggleConnect()' style='padding:4px 10px;font-size:11px'>Connect</button>"
 "  <div style='margin-left:auto;display:flex;gap:6px;align-items:center'>"
 "    <input id='otafile' type='file' accept='.bin' style='display:none' />"
 "    <button onclick='document.getElementById(\"otafile\").click()' style='background:#5a3e8a;padding:4px 10px;font-size:11px'>Flash</button>"
@@ -116,7 +120,7 @@ static const char TERMINAL_HTML[] =
 "<script>"
 "const log=document.getElementById('log');"
 "const status=document.getElementById('status');"
-"let ws,autoScroll=true;"
+"let ws,autoScroll=true,userDisconnect=false;"
 ""
 "function appendLine(text,cls){"
 "  const el=document.createElement('div');"
@@ -136,23 +140,35 @@ static const char TERMINAL_HTML[] =
 "  return 'sys';"
 "}"
 ""
+"function toggleConnect(){"
+"  if(ws&&ws.readyState===1)disconnect();else connect();"
+"}"
+""
 "function connect(){"
+"  userDisconnect=false;"
 "  const proto=location.protocol==='https:'?'wss':'ws';"
 "  ws=new WebSocket(proto+'://'+location.host+'/ws');"
 "  ws.onopen=()=>{"
 "    status.className='ok';"
-"    document.getElementById('ip').textContent=location.host;"
-""
+"    const b=document.getElementById('connbtn');"
+"    b.textContent='Disconnect';b.classList.add('disconn');"
 "  };"
 "  ws.onmessage=e=>{"
 "    e.data.split('\\n').forEach(l=>{if(l.trim())appendLine(l,classForLine(l));});"
 "  };"
 "  ws.onclose=()=>{"
 "    status.className='';"
-"    appendLine('# Connection lost - reconnecting in 3s...','err');"
-"    setTimeout(connect,3000);"
+"    const b=document.getElementById('connbtn');"
+"    b.textContent='Connect';b.classList.remove('disconn');"
+"    if(userDisconnect)appendLine('# Disconnected','info');"
+"    else appendLine('# Connection lost','err');"
 "  };"
 "  ws.onerror=()=>ws.close();"
+"}"
+""
+"function disconnect(){"
+"  userDisconnect=true;"
+"  if(ws)ws.close();"
 "}"
 ""
 "function sendCmd(){"
@@ -274,7 +290,6 @@ static const char TERMINAL_HTML[] =
 "  },1000);"
 "}"
 ""
-"connect();"
 "</script></body></html>";
 
 // ── HTTP Handler: GET / ───────────────────────────────────────────
@@ -418,28 +433,18 @@ static esp_err_t handler_ws(httpd_req_t *req)
         ws_client_add(fd);
 
         // Version beim WebSocket-Connect senden
-        char rssi_suffix[40] = "";
+        char rssi_line[48] = "# Connected\r\n";
         {
             wifi_ap_record_t _ap;
             if (esp_wifi_sta_get_ap_info(&_ap) == ESP_OK) {
-                int rssi = _ap.rssi;
-                int bars = (rssi >= -55) ? 4 : (rssi >= -67) ? 3 :
-                           (rssi >= -80) ? 2 : (rssi >= -90) ? 1 : 0;
-                static const char *const BAR[4] = {"\xe2\x96\x82", "\xe2\x96\x84",
-                                                   "\xe2\x96\x86", "\xe2\x96\x88"};
-                char bar[24] = {0};
-                int pos = 0;
-                for (int i = 0; i < 4; i++) {
-                    if (i < bars) pos += snprintf(bar + pos, sizeof(bar) - pos, "%s", BAR[i]);
-                    else bar[pos++] = '_';
-                }
-                snprintf(rssi_suffix, sizeof(rssi_suffix), " %s (%d dBm)", bar, rssi);
+                snprintf(rssi_line, sizeof(rssi_line),
+                         "# Connected (RSSI: %d dBm)\r\n", _ap.rssi);
             }
         }
         char welcome[160];
         snprintf(welcome, sizeof(welcome),
-                 "# CAN Sniffer v" CAN_SNIFFER_VERSION " (type HELP for commands)%s\r\n",
-                 rssi_suffix);
+                 "%s# CAN Sniffer v" CAN_SNIFFER_VERSION " (type HELP for commands)\r\n",
+                 rssi_line);
         httpd_ws_frame_t pkt = {
             .type    = HTTPD_WS_TYPE_TEXT,
             .payload = (uint8_t *)welcome,

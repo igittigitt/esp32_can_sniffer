@@ -329,7 +329,7 @@ void parse_command(char *cmd, int sock)
             can_nvs_save_active_bus(bus);
             can_reset_stats();
             snprintf(response, sizeof(response),
-                     "OK: Bus switched to %s (%lu kbps, %s)\r\n",
+                     "# OK: Bus switched to %s (%lu kbps, %s)\r\n",
                      can_bus_name(bus),
                      (unsigned long)can_get_bitrate(bus),
                      can_get_listen_only() ? "LISTEN-ONLY" : "NORMAL");
@@ -368,7 +368,7 @@ void parse_command(char *cmd, int sock)
         if (ret == ESP_OK) {
             can_nvs_save_bitrate(bus, kbps);
             snprintf(response, sizeof(response),
-                     "OK: %s bitrate set to %lu kbps%s\r\n",
+                     "# OK: %s bitrate set to %lu kbps%s\r\n",
                      can_bus_name(bus), (unsigned long)kbps,
                      (can_get_active_bus() == bus) ? " (active, restarted)" : " (saved)");
         } else {
@@ -395,7 +395,7 @@ void parse_command(char *cmd, int sock)
         can_set_listen_only(listen);
         can_nvs_save_listen_only(listen);
         snprintf(response, sizeof(response),
-                 "OK: Mode set to %s\r\n", listen ? "LISTEN-ONLY" : "NORMAL");
+                 "# OK: Mode set to %s\r\n", listen ? "LISTEN-ONLY" : "NORMAL");
         CMD_SEND(sock, response, strlen(response));
     }
 
@@ -459,7 +459,7 @@ void parse_command(char *cmd, int sock)
                      "ERROR: WIFI <SSID> <PASSWORD>\r\n");
         } else if (wifi_set_credentials(ssid, pass)) {
             snprintf(response, sizeof(response),
-                     "OK: WiFi saved, type REBOOT to connect\r\n");
+                     "# OK: WiFi saved, type REBOOT to connect\r\n");
         } else {
             snprintf(response, sizeof(response), "ERROR: NVS write failed\r\n");
         }
@@ -589,20 +589,20 @@ void parse_command(char *cmd, int sock)
             esp_wifi_get_mode(&mode);
             bool force_ap = wifi_nvs_get_force_ap();
             snprintf(response, sizeof(response),
-                     "OK: WiFi mode: %s%s\r\n",
+                     "# OK: WiFi mode: %s%s\r\n",
                      (mode == WIFI_MODE_AP) ? "AP" : "STA",
                      force_ap ? " (force-AP set, use WIFIMODE STA to clear)" : "");
         } else if (strcasecmp(arg, "AP") == 0) {
             if (wifi_nvs_set_force_ap(true)) {
                 snprintf(response, sizeof(response),
-                         "OK: Will start in AP mode after REBOOT\r\n");
+                         "# OK: Will start in AP mode after REBOOT\r\n");
             } else {
                 snprintf(response, sizeof(response), "ERROR: NVS write failed\r\n");
             }
         } else if (strcasecmp(arg, "STA") == 0) {
             if (wifi_nvs_set_force_ap(false)) {
                 snprintf(response, sizeof(response),
-                         "OK: Will start in STA mode after REBOOT\r\n");
+                         "# OK: Will start in STA mode after REBOOT\r\n");
             } else {
                 snprintf(response, sizeof(response), "ERROR: NVS write failed\r\n");
             }
