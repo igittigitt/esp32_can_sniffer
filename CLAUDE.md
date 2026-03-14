@@ -64,6 +64,8 @@ Key commands: `CANBUS <MS|HS|MM|OFF>`, `BITRATE <bus> <kbps>`, `MODE <LISTEN|NOR
 
 **`parse_command()` response buffer** is `char response[1024]` (stack-allocated). Every command response — including the full HELP text — must fit within 1024 bytes. When adding a new command, verify the HELP text still fits: count all bytes in the HELP `snprintf` format string and ensure the total stays below 1024. If it doesn't fit, increase the buffer size and update this note.
 
+**snprintf buffer sizing rule:** Size every destination buffer to the compiler's worst-case, not the application's expected case. The compiler derives the maximum `%s` width from `sizeof(src_buf) - 1`, not from actual content — so if `bar[24]` feeds into an snprintf, the compiler assumes up to 23 bytes regardless of what the code actually writes. Always add slack (≥ 8 bytes) over the format string's theoretical maximum to avoid `-Wformat-truncation` warnings and silent truncation bugs.
+
 ### WiFi Startup Logic
 
 STA credentials are resolved in priority order: compile-time Kconfig → NVS → AP fallback (SSID: `CAN-Sniffer`, pass: `can12345`, IP: `192.168.4.1`).

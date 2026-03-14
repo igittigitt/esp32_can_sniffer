@@ -418,7 +418,7 @@ static esp_err_t handler_ws(httpd_req_t *req)
         ws_client_add(fd);
 
         // Version beim WebSocket-Connect senden
-        char rssi_suffix[32] = "";
+        char rssi_suffix[40] = "";
         {
             wifi_ap_record_t _ap;
             if (esp_wifi_sta_get_ap_info(&_ap) == ESP_OK) {
