@@ -33,7 +33,7 @@ extern "C" {
 #define CAN_BUS_SWITCH_DELAY_MS 10      // Settling time after STB switch
 
 // Comma-separated list of all supported CAN buses (used by IDENTIFY command)
-#define CAN_SUPPORTED_BUSES     "HS0, MS0, MM0"
+#define CAN_SUPPORTED_BUSES     "HS, MS, MM"
 
 // ═══════════════════════════════════════════════════════════════════
 // Types
